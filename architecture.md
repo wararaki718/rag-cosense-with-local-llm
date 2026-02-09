@@ -1,7 +1,7 @@
 # アーキテクチャ設計案 (RAG Cosense with Local LLM)
 
 ## 1. システム概要
-Scrapbox (Cosense) のデータをソースとし、SPLADE モデルによる疎ベクトル変換と Elasticsearch を活用した RAG (Retrieval-Augmented Generation) システム。ユーザーの質問に対して、関連する Scrapbox ページを検索し、LLM が回答を生成する。
+Scrapbox (Cosense) のデータをソースとし、SPLADE モデルによる疎ベクトル変換と Elasticsearch を活用したハイブリッド検索（BM25 + 疎ベクトル）による RAG (Retrieval-Augmented Generation) システム。ユーザーの質問に対して、関連する Scrapbox ページを精度高く検索し、LLM が回答を生成する。
 
 ## 2. アーキテクチャ構成図
 
@@ -59,7 +59,9 @@ graph TD
 ### 3.2 データ・インジェクション (バッチ/非同期)
 Scrapbox からデータを抽出し、検索エンジンに登録するプロセス。
 - **Scrapbox Connector**: Scrapbox API (JSON export など) を介してプロジェクトのデータを取得。
-- **Text Splitter**: 長いページを適切なチャンクサイズに分割。
+- **Text Splitter**: 
+    - 長いページを適切なチャンクサイズに分割。
+    - Scrapbox 特有の記法（ブラケットリンクなど）を考慮し、意味的な区切りを壊さないカスタムパーサーを実装。
 - **Data Indexer**:
     - 登録処理のメインロジックを担当。
     - `SPLADE API Service` を呼び出してチャンクをベクトル化し、テキスト、メタデータ、ベクトルのセットを `Elasticsearch` に投入する。
@@ -86,15 +88,15 @@ Scrapbox からデータを抽出し、検索エンジンに登録するプロ�
 
 | 区分 | 技術 | 備考 |
 | :--- | :--- | :--- |
-| **Search Engine** | Elasticsearch | `rank_features` による高速な疎ベクトル検索 |
+| **Search Engine** | Elasticsearch | `BM25` + `rank_features` によるハイブリッド検索 |
 | **Encoding Service** | SPLADE API (FastAPI) | 独立したサービスとして運用。GPUリソースを集中活用 |
 | **LLM Service** | Gemma 3 (Ollama / vLLM) | 独立したサービスとして運用。マルチモーダル対応も視野 |
-| **Main Application** | App API (FastAPI) | 検索ロジックも含め、 RAG フローを制御 |
+| **Main Application** | App API (FastAPI) | 検索ロジック (Hybrid Search) と RAG フローを制御 |
 | **Frontend Framework** | Streamlit or Next.js | 迅速なプロトタイプ開発 |
 | **Language** | Python 3.10+ | エコシステムの活用 |
 
 ## 6. 検討事項・将来の拡張性
-- **ハイブリッド検索**: BM25 と SPLADE のスコアを組み合わせる (RRF など) ことによる精度向上。
+- **RAG 評価基盤**: RAGAS 等を用いた回答精度（Faithfulness, Relevancy）の定量評価。
 - **メタデータフィルタリング**: 特定のタグや日付での絞り込み。
 - **Re-ranking**: 検索結果を上位数件に対して Cross-Encoder モデルで再ランク付け。
 - **差分同期**: Scrapbox の更新を検知して差分のみを Elasticsearch に反映させる仕組み。
@@ -104,8 +106,8 @@ Scrapbox からデータを抽出し、検索エンジンに登録するプロ�
 ### 7.1 通信オーバーヘッドとレスポンス遅延
 - **懸念**: 1つのリクエストに対して `App API` ⇔ `SPLADE API` ⇔ `ES` ⇔ `Gemma 3 API` と多くのホップが発生し、ネットワーク遅延やシリアライズ負荷が累積する。
 - **対策**: 
-    - 同一プロジェクト内の場合は gRPC の採用を検討。
-    - Gemma 3 の生成（Streaming）を Web UI まで透過的にストリーミングする設計。
+    - 同一プロジェクト内の場合は gRPC の採用、または SPLADE モデルの App API への統合を検討。
+    - 全経路での非同期ストリーミング（TTFT の最小化）を実装。
 
 ### 7.2 GPU リソース管理の競合
 - **懸念**: `SPLADE` と `Gemma 3` がそれぞれ独立したサービスとして GPU を要求するため、同一ホストで運用する場合に VRAM の食い合いが発生する。
@@ -129,3 +131,9 @@ Scrapbox からデータを抽出し、検索エンジンに登録するプロ�
 - **懸念**: 各サービスが独立しているため、内部ネットワーク内での不正アクセスや、意図しないモデルの呼び出しリスクがある。
 - **対策**: 
     - mTLS (mutual TLS) または 内部向けのシンプルな API Key 認証の導入。
+
+### 7.6 検索精度の維持と信頼性評価
+- **懸念**: システムの変更が検索精度や回答品質に与える影響を客観的に評価できない。
+- **対策**: 
+    - Hit Rate や MRR などの検索指標のログ収集。
+    - LLM による自動評価（Faithfulness, Answer Relevance）をパイプラインに組み込み、継続的に精度をモニタリング。
