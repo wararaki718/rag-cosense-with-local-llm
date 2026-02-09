@@ -1,0 +1,53 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  splade-api:
+    build: ./splade-api
+    container_name: splade-api
+    ports:
+      - "8001:8001"
+    environment:
+      - MODEL_NAME=naver/splade-cocondenser-ensemblev2
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  app-api:
+    build: ./app-api
+    container_name: app-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SPLADE_API_URL=http://splade-api:8001
+      - OLLAMA_URL=http://host.docker.internal:11434
+    depends_on:
+      - elasticsearch
+      - splade-api
+
+  web-ui:
+    build: ./web-ui
+    container_name: web-ui
+    ports:
+      - "8501:8501"
+    environment:
+      - APP_API_URL=http://app-api:8000
+    depends_on:
+      - app-api
+
+volumes:
+  es_data:

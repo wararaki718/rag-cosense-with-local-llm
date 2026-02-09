@@ -1,0 +1,5 @@
+elasticsearch>=8.0.0
+langchain
+langchain-community
+httpx
+python-dotenv
