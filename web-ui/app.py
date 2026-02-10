@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration
-APP_API_URL = os.getenv("APP_API_URL", "http://localhost:8000/query")
+APP_API_URL = os.getenv("APP_API_URL", "http://localhost:8000")
 
 st.set_page_config(
     page_title="Cosense RAG Chat",
@@ -69,14 +69,15 @@ def main():
             
             try:
                 # Call App API with streaming
+                api_endpoint = f"{APP_API_URL.rstrip('/')}/query"
                 with httpx.stream(
                     "POST", 
-                    APP_API_URL, 
+                    api_endpoint, 
                     json={"user_query": prompt, "top_k": top_k}, 
                     timeout=None
                 ) as response:
                     if response.status_code != 200:
-                        st.error(f"API Error: {response.status_code}")
+                        st.error(f"API Error: {response.status_code} (Endpoint: {api_endpoint})")
                     else:
                         buffer = ""
                         metadata_received = False

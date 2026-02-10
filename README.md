@@ -53,13 +53,17 @@ docker compose up --build
 
 ### 5. データのインデックス作成
 
-Scrapbox からエクスポートした JSON ファイルを `data/` ディレクトリなどに配置し、インデクサを実行します。
+Docker を使用してインデックス作成を実行します。`.env` ファイルに `SCRAPBOX_PROJECT`（および必要に応じて `SCRAPBOX_SID`）が設定されていることを確認してください。
 
 ```bash
-# ローカルの仮想環境などで実行する場合
+docker compose run --rm indexer --project your-project-name
+```
+
+もしローカルの Python 環境で実行したい場合は以下の通りです：
+```bash
 cd indexer
 pip install -r requirements.txt
-python index_data.py --file ../data/your-scrapbox-data.json
+python index_data.py --project your-project-name
 ```
 
 ### 6. Web UI へのアクセス

@@ -10,6 +10,11 @@ services:
       - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   splade-api:
     build: ./splade-api
@@ -33,8 +38,8 @@ services:
       - "8000:8000"
     environment:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - SPLADE_API_URL=http://splade-api:8001
-      - OLLAMA_URL=http://host.docker.internal:11434
+      - SPLADE_API_URL=http://splade-api:8001/encode
+      - OLLAMA_URL=http://host.docker.internal:11434/api/generate
     depends_on:
       - elasticsearch
       - splade-api
@@ -48,6 +53,22 @@ services:
       - APP_API_URL=http://app-api:8000
     depends_on:
       - app-api
+
+  indexer:
+    build: ./indexer
+    container_name: indexer
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SPLADE_API_URL=http://splade-api:8001/encode
+      - SCRAPBOX_PROJECT=${SCRAPBOX_PROJECT}
+      - SCRAPBOX_SID=${SCRAPBOX_SID}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      splade-api:
+        condition: service_started
+    profiles:
+      - tools
 
 volumes:
   es_data:

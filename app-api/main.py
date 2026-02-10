@@ -46,7 +46,7 @@ async def get_query_vector(text: str) -> Dict[str, float]:
     """
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            logger.info(f"Vectorizing query: {text[:50]}...")
+            logger.info(f"Vectorizing query via {settings.splade_api_url}: {text[:50]}...")
             response = await client.post(
                 settings.splade_api_url, 
                 json={"text": text}
@@ -55,9 +55,15 @@ async def get_query_vector(text: str) -> Dict[str, float]:
             data = response.json()
             # Extract the sparse_vector from the response
             return data.get("sparse_vector", {})
-        except httpx.HTTPError as e:
-            logger.error(f"SPLADE API error: {e}")
-            raise HTTPException(status_code=503, detail="Vectorization service unavailable")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"SPLADE API status error: {e.response.status_code} - {e.response.text}")
+            raise HTTPException(status_code=503, detail=f"Vectorization service error: {e.response.status_code}")
+        except httpx.RequestError as e:
+            logger.error(f"SPLADE API connection error: {e}")
+            raise HTTPException(status_code=503, detail="Vectorization service unreachable")
+        except Exception as e:
+            logger.exception(f"Unexpected error calling SPLADE API")
+            raise HTTPException(status_code=500, detail=str(e))
 
 async def search_documents(query_vector: Dict[str, float], top_k: int) -> List[Dict]:
     """Performs a sparse vector search on Elasticsearch using rank_features.
