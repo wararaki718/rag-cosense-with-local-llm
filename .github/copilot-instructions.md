@@ -7,7 +7,7 @@
 - **Search Engine**: Elasticsearch (疎ベクトル検索に `rank_features` を使用)
 - **Main Framework**: FastAPI (App API & SPLADE API)
 - **LLM Service**: Gemma 3 (Ollama / vLLM を介して公開)
-- **Sparse Vector Model**: SPLADE (`naver/splade-cocondenser-ensemblev2`)
+- **Sparse Vector Model**: SPLADE (`naver/splade-cocondenser-ensembledistil`)
 - **UI Framework**: Streamlit (もしくは Next.js)
 
 ## 構成コンポーネント (Component Architecture)

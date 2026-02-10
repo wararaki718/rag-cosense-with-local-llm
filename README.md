@@ -4,7 +4,7 @@ Scrapbox (Cosense) のデータをソースとし、SPLADE による疎ベクト
 
 ## 🚀 特徴
 
-- **疎ベクトル検索 (Sparse Vector Search)**: SPLADE (`naver/splade-cocondenser-ensemblev2`) を使用して、キーワードベースよりも精度の高い検索を実現。
+- **疎ベクトル検索 (Sparse Vector Search)**: SPLADE (`naver/splade-cocondenser-ensembledistil`) を使用して、キーワードベースよりも精度の高い検索を実現。
 - **ハイブリッド検索**: Elasticsearch の `rank_features` を活用。
 - **ローカル LLM**: Ollama を介して Gemma 3 を使用し、プライバシーを保ちつつ回答を生成。
 - **マイクロサービス構成**: GPU リソースを消費するベクトル化サービスと、軽量なアプリケーション API を分離。
@@ -47,7 +47,7 @@ cp .env.example .env
 Docker Compose を使用して、Elasticsearch、splade-api、app-api、web-ui を一括で起動します。
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 ※ `splade-api` は初回起動時にモデルのダウンロードを行うため、時間がかかる場合があります。
 

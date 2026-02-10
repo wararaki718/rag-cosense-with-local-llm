@@ -12,7 +12,7 @@ app = FastAPI(
 )
 
 # Model configuration
-MODEL_NAME = os.getenv("MODEL_NAME", "naver/splade-cocondenser-ensemblev2")
+MODEL_NAME = os.getenv("MODEL_NAME", "naver/splade-cocondenser-ensembledistil")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print(f"Loading SPLADE model '{MODEL_NAME}' on {device}...")

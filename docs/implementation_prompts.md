@@ -22,7 +22,7 @@ SPLADE モデルを FastAPI でラップします。
 
 **Prompt:**
 > `splade-api/` 内に、FastAPI を使用した疎ベクトル変換 API を作成してください。
-> - `naver/splade-cocondenser-ensemblev2` モデルを Hugging Face からロードすること
+> - `naver/splade-cocondenser-ensembledistil` モデルを Hugging Face からロードすること
 > - 入力テキストを受け取り、Elasticsearch の `rank_features` 形式に適した `{token: weight}` の辞書形式を返すエンドポイント `/encode` を作成してください
 > - GPU が利用可能な場合は GPU を使用するようにしてください
 
