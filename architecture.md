@@ -88,14 +88,27 @@ Scrapbox からデータを抽出し、検索エンジンに登録するプロ�
 
 | 区分 | 技術 | 備考 |
 | :--- | :--- | :--- |
-| **Search Engine** | Elasticsearch | `BM25` + `rank_features` によるハイブリッド検索 |
-| **Encoding Service** | SPLADE API (FastAPI) | 独立したサービスとして運用。GPUリソースを集中活用 |
-| **LLM Service** | Gemma 3 (Ollama / vLLM) | 独立したサービスとして運用。マルチモーダル対応も視野 |
-| **Main Application** | App API (FastAPI) | 検索ロジック (Hybrid Search) と RAG フローを制御 |
-| **Frontend Framework** | Streamlit or Next.js | 迅速なプロトタイプ開発 |
-| **Language** | Python 3.10+ | エコシステムの活用 |
+| **Search Engine** | Elasticsearch 8.12.0 | `BM25` + `rank_features` によるハイブリッド検索 |
+| **Encoding Service** | SPLADE API (FastAPI) | 独立したサービスとして運用。`/encode` エンドポイントを提供 |
+| **LLM Service** | Gemma 3 (Ollama / vLLM) | `/api/generate` を介してストリーミング推論を実行 |
+| **Main Application** | App API (FastAPI) | 検索ロジックと RAG フローを制御。`elasticsearch==8.12.0` を使用 |
+| **Frontend Framework** | Streamlit | 迅速なプロトタイプ開発 |
+| **Language** | Python 3.11+ | 各コンポーネントで一貫した型ヒント、非同期処理を実装 |
 
-## 6. 検討事項・将来の拡張性
+## 6. 運用・実装上の注意点
+
+### 6.1 接続の安定性 (macOS/Docker)
+- コンテナ間通信には Docker サービス名（`elasticsearch`, `splade-api`）を使用し、ホスト（ブラウザ等）からは `localhost` を使用する。
+- macOS 環境では `127.0.0.1` よりも `localhost` の方が通信が安定する場合があるため、デフォルト設定に採用。
+
+### 6.2 データバリデーション
+- Elasticsearch の `rank_features` は「0より大きい正の値」のみを受け付ける。
+- インデクサー側で SPLADE モデルの出力から負値や 0 をフィルタリングすることで `BulkIndexError` を防止。
+
+### 6.3 依存関係の整合性
+- Elasticsearch の Python ライブラリとサーバー本体のバージョン（8.12.0）を厳密に一致させることで、非同期通信とプロトコルの互換性を確保。
+
+## 7. 検討事項・将来の拡張性
 - **RAG 評価基盤**: RAGAS 等を用いた回答精度（Faithfulness, Relevancy）の定量評価。
 - **メタデータフィルタリング**: 特定のタグや日付での絞り込み。
 - **Re-ranking**: 検索結果を上位数件に対して Cross-Encoder モデルで再ランク付け。
