@@ -75,6 +75,20 @@ python index_data.py --project your-project-name
 ブラウザで以下の URL にアクセスします。
 - **Web UI**: `http://localhost:8501`
 
+### 7. 精度評価 (Evaluation)
+
+Ragas を使用した定量評価基盤を同梱しています。Docker を使用して簡単に実行できます。
+
+```bash
+# データセット生成
+docker compose run --rm eval python dataset_generator.py
+
+# 評価実行
+docker compose run --rm eval python evaluate.py
+```
+
+詳細な手順は [docs/evaluation.md](docs/evaluation.md) を参照してください。
+
 ---
 
 ## 📄 ライセンス

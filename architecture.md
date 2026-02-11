@@ -36,6 +36,7 @@ graph TD
     subgraph "Backend & UI (CPU/Lightweight)"
         UI[Web UI]
         App[App API]
+        EVAL[Evaluation Suite]
         
         UI -- POST /query --> App
         App -- 1. Text --> SP_API
@@ -45,6 +46,11 @@ graph TD
         App -- 5. Prompt --> G3_API
         G3_API -- 6. Answer --> App
         App -- 7. Response --> UI
+
+        EVAL -- 1. Fetch Docs --> ES_IDX
+        EVAL -- 2. Generate Testset --> G3_API
+        EVAL -- 3. Execute RAG --> App
+        EVAL -- 4. Quantitative Eval --> G3_API
     end
 ```
 
@@ -76,6 +82,9 @@ Scrapbox からデータを抽出し、検索エンジンに登録するプロ�
     - `SPLADE API` によるクエリのベクトル化、`Elasticsearch` への検索クエリ発行、結果の集約、`Gemma 3 API` への生成依頼を一貫して行う。
 - **Augmentor**: `App API` 内で、検索結果とクエリを組み合わせてプロンプトを構築するロジック。
 - **Gemma 3 Generator**: 構築されたプロンプトを `Gemma 3 API Service` に送り、回答を取得。
+- **Evaluation Suite (RAGAS)**:
+    - Ragas フレームワークを用い、回答の忠実性 (Faithfulness) や関連性 (Relevancy) を計測。
+    - 合成データ生成ツール (`dataset_generator.py`) と評価実行ツール (`evaluate.py`) で構成。
 
 ## 4. データフロー
 
@@ -83,6 +92,8 @@ Scrapbox からデータを抽出し、検索エンジンに登録するプロ�
     `Scrapbox API` -> `Text Splitter` -> `Data Indexer` -> `SPLADE API Service` (ベクトル化) -> `Data Indexer` -> `Elasticsearch`
 2.  **検索・生成**:
     `User Query` -> `Web UI` -> `App API` -> `SPLADE API Service` (ベクトル化) -> `Elasticsearch` (検索) -> `App API` (プロンプト構築) -> `Gemma 3 API Service` -> `Answer`
+3.  **継続的評価**:
+    `Elasticsearch` -> `Evaluation Suite` (データ抽出) -> `Gemma 3 API Service` (合成設問生成) -> `App API` (RAG実行) -> `Evaluation Suite` (スコアリング)
 
 ## 5. 技術スタック (提案)
 
@@ -109,7 +120,6 @@ Scrapbox からデータを抽出し、検索エンジンに登録するプロ�
 - Elasticsearch の Python ライブラリとサーバー本体のバージョン（8.12.0）を厳密に一致させることで、非同期通信とプロトコルの互換性を確保。
 
 ## 7. 検討事項・将来の拡張性
-- **RAG 評価基盤**: RAGAS 等を用いた回答精度（Faithfulness, Relevancy）の定量評価。
 - **メタデータフィルタリング**: 特定のタグや日付での絞り込み。
 - **Re-ranking**: 検索結果を上位数件に対して Cross-Encoder モデルで再ランク付け。
 - **差分同期**: Scrapbox の更新を検知して差分のみを Elasticsearch に反映させる仕組み。

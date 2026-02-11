@@ -70,5 +70,21 @@ services:
     profiles:
       - tools
 
+  eval:
+    build: ./eval
+    container_name: eval
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - APP_API_URL=http://app-api:8000/query
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - LLM_MODEL=gemma3
+    volumes:
+      - ./eval:/app
+    depends_on:
+      - elasticsearch
+      - app-api
+    profiles:
+      - tools
+
 volumes:
   es_data:
